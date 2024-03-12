@@ -1,7 +1,7 @@
 # Direct LiDAR Odometry: <br> Fast Localization with Dense Point Clouds
 
 ## SC-DLO: SC-DLO-GTSAM
-给 [DLO](https://github.com/vectr-ucla/direct_lidar_odometry) 这个高精度轻量级的里程计 Odometry 加上连续激光因子和回环因子, 回环检测的方法采用的 [Scan Context](https://github.com/gisbi-kim/SC-A-LOAM/blob/main/src/laserPosegraphOptimization.cpp), 后端优化使用 [GTSAM 4.0.3](https://github.com/borglab/gtsam/releases/tag/4.0.3), 代码框架基本沿用 [SC-A-LOAM](https://github.com/gisbi-kim/SC-A-LOAM) 的框架.
+给 [DLO](https://github.com/vectr-ucla/direct_lidar_odometry) 这个高精度轻量级的**纯激光**里程计 Odometry 加上连续激光因子和回环因子, 回环检测的方法采用的 [Scan Context](https://github.com/gisbi-kim/SC-A-LOAM/blob/main/src/laserPosegraphOptimization.cpp), 后端优化使用 [GTSAM 4.0.3](https://github.com/borglab/gtsam/releases/tag/4.0.3), 代码框架基本沿用 [SC-A-LOAM](https://github.com/gisbi-kim/SC-A-LOAM) 的框架.
 
 #### 效果
 数据集来自高博的[自动驾驶中的SLAM技术](https://github.com/gaoxiang12/slam_in_autonomous_driving)仓库所提供的 [ulhk test2.bag](https://onedrive.live.com/?authkey=%21AHo6FMAmh0XGnLU&id=1A7361D22C554503%2191934&cid=1A7361D22C554503) 数据集
