@@ -1,0 +1,3 @@
+alaserPGO:
+  save_directory: /home/robot-nuc12/catkin_ws/src/slam/direct_lidar_odometry/data/
+
