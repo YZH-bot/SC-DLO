@@ -21,6 +21,12 @@
     <em>细节对比: 左图是无后端优化的 DLO Odometry, 右图是 SC-DLO</em>
 </p>
 
+#### 运行
+```C++
+roslaunch direct_lidar_odometry sc_dlo.launch
+```
+
+
 #### DLO link: [[IEEE RA-L](https://ieeexplore.ieee.org/document/9681177)] [[ArXiv](https://arxiv.org/abs/2110.00605)] [[Video](https://www.youtube.com/watch?v=APot6QP_wvg)] [[Code](https://github.com/vectr-ucla/direct_lidar_odometry)]
 
 DLO is a lightweight and computationally-efficient frontend LiDAR odometry solution with consistent and accurate localization. It features several algorithmic innovations that increase speed, accuracy, and robustness of pose estimation in perceptually-challenging environments and has been extensively tested on aerial and legged robots.

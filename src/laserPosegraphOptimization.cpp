@@ -65,6 +65,7 @@ double translationAccumulated = 1000000.0; // large value means must add the fir
 double rotaionAccumulated = 1000000.0;     // large value means must add the first given frame.
 
 bool isNowKeyFrame = false;
+bool save_map;
 
 Pose6D odom_pose_prev{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // init
 Pose6D odom_pose_curr{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // init pose is zero
@@ -187,13 +188,13 @@ gtsam::Pose3 Pose6DtoGTSAMPose3(const Pose6D &p)
 
 void saveGTSAMgraphG2oFormat(const gtsam::Values &_estimates)
 {
-    cout << "begin of saveGTSAMgraphG2oFormat\n";
+    // cout << "begin of saveGTSAMgraphG2oFormat\n";
     // save pose graph (runs when programe is closing)
     // cout << "****************************************************" << endl;
-    cout << "Saving the posegraph ..." << endl; // giseop
+    // cout << "Saving the posegraph ..." << endl; // giseop
 
     pgG2oSaveStream = std::fstream(save_directory + "singlesession_posegraph.g2o", std::fstream::out);
-    cout << "Saved the posegraph !!!" << endl; // giseop
+    // cout << "Saved the posegraph !!!" << endl; // giseop
 
     int pose_idx = 0;
     for (const auto &_pose6d : keyframePoses)
@@ -206,12 +207,12 @@ void saveGTSAMgraphG2oFormat(const gtsam::Values &_estimates)
         pgG2oSaveStream << _line << std::endl;
 
     pgG2oSaveStream.close();
-    cout << "end of saveGTSAMgraphG2oFormat function" << endl; // giseop
+    // cout << "end of saveGTSAMgraphG2oFormat function" << endl; // giseop
 }
 
 void saveOdometryVerticesKITTIformat(std::string _filename)
 {
-    cout << "begin of saveOdometryVerticesKITTIformat\n";
+    // cout << "begin of saveOdometryVerticesKITTIformat\n";
     // ref from gtsam's original code "dataset.cpp"
     std::fstream stream(_filename.c_str(), std::fstream::out);
     for (const auto &_pose6d : keyframePoses)
@@ -227,13 +228,13 @@ void saveOdometryVerticesKITTIformat(std::string _filename)
                << col1.y() << " " << col2.y() << " " << col3.y() << " " << t.y() << " "
                << col1.z() << " " << col2.z() << " " << col3.z() << " " << t.z() << std::endl;
     }
-    cout << "end of saveOdometryVerticesKITTIformat\n";
+    // cout << "end of saveOdometryVerticesKITTIformat\n";
 }
 
 void saveOptimizedVerticesKITTIformat(gtsam::Values _estimates, std::string _filename)
 {
     using namespace gtsam;
-    cout << "begin of saveOptimizedVerticesKITTIformat\n";
+    // cout << "begin of saveOptimizedVerticesKITTIformat\n";
     // ref from gtsam's original code "dataset.cpp"
     std::fstream stream(_filename.c_str(), std::fstream::out);
 
@@ -255,14 +256,14 @@ void saveOptimizedVerticesKITTIformat(gtsam::Values _estimates, std::string _fil
                << col1.y() << " " << col2.y() << " " << col3.y() << " " << t.y() << " "
                << col1.z() << " " << col2.z() << " " << col3.z() << " " << t.z() << std::endl;
     }
-    cout << "end of saveOptimizedVerticesKITTIformat\n";
+    // cout << "end of saveOptimizedVerticesKITTIformat\n";
 }
 
 void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr &_laserOdometry)
 {
     mBuf.lock();
     odometryBuf.push(_laserOdometry);
-    std::cout << "odom size = " << odometryBuf.size() << "\n";
+    // std::cout << "odom size = " << odometryBuf.size() << "\n";
     mBuf.unlock();
 } // laserOdometryHandler
 
@@ -270,7 +271,7 @@ void laserCloudFullResHandler(const sensor_msgs::PointCloud2ConstPtr &_laserClou
 {
     mBuf.lock();
     fullResBuf.push(_laserCloudFullRes);
-    std::cout << "cloud size = " << odometryBuf.size() << "\n";
+    // std::cout << "cloud size = " << odometryBuf.size() << "\n";
     mBuf.unlock();
 } // laserCloudFullResHandler
 
@@ -329,11 +330,11 @@ Pose6D diffTransformation(const Pose6D &_p1, const Pose6D &_p2)
 {
     Eigen::Affine3f SE3_p1 = pcl::getTransformation(_p1.x, _p1.y, _p1.z, _p1.roll, _p1.pitch, _p1.yaw);
     Eigen::Affine3f SE3_p2 = pcl::getTransformation(_p2.x, _p2.y, _p2.z, _p2.roll, _p2.pitch, _p2.yaw);
-    Eigen::Matrix4f SE3_delta0 = SE3_p1.matrix().inverse() * SE3_p2.matrix();
+    Eigen::Matrix4f SE3_delta0 = SE3_p1.matrix().inverse() * SE3_p2.matrix();   // info: odom 相对位姿
     Eigen::Affine3f SE3_delta;
     SE3_delta.matrix() = SE3_delta0;
     float dx, dy, dz, droll, dpitch, dyaw;
-    pcl::getTranslationAndEulerAngles(SE3_delta, dx, dy, dz, droll, dpitch, dyaw);
+    pcl::getTranslationAndEulerAngles(SE3_delta, dx, dy, dz, droll, dpitch, dyaw);  // info: transform矩阵转 t, 欧拉角
     // std::cout << "delta : " << dx << ", " << dy << ", " << dz << ", " << droll << ", " << dpitch << ", " << dyaw << std::endl;
 
     return Pose6D{double(abs(dx)), double(abs(dy)), double(abs(dz)), double(abs(droll)), double(abs(dpitch)), double(abs(dyaw))};
@@ -560,11 +561,9 @@ void process_pg()
     {
         while (!odometryBuf.empty() && !fullResBuf.empty())
         {
-            //
             // pop and check keyframe is or not
-            // info: 这里还需要改进, lidar和pose的频率几乎差不多, 时间同步做的比较粗糙
-            //
-            std::cout << "wating for pose..........n";
+            // info: 这里还需要改进, 因为LO系统lidar和pose的频率几乎差不多, 时间同步改成下面的形式
+            // std::cout << "wating for pose..........\n";
             mBuf.lock();
             // while (!odometryBuf.empty() && odometryBuf.front()->header.stamp.toSec() < fullResBuf.front()->header.stamp.toSec())
             //     odometryBuf.pop();
@@ -573,20 +572,26 @@ void process_pg()
             //     mBuf.unlock();
             //     break;
             // }
-            while (!fullResBuf.empty() && fullResBuf.front()->header.stamp.toSec() < odometryBuf.front()->header.stamp.toSec())
-                fullResBuf.pop();
-            if (fullResBuf.empty())
+            while (!fullResBuf.empty() &&
+                   abs(fullResBuf.front()->header.stamp.toSec() - odometryBuf.front()->header.stamp.toSec()) > 0.001)
+            {
+                if (fullResBuf.front()->header.stamp.toSec() > odometryBuf.front()->header.stamp.toSec())
+                    odometryBuf.pop();
+                else
+                    fullResBuf.pop();
+            }
+            if (fullResBuf.empty() || odometryBuf.empty())
             {
                 mBuf.unlock();
                 break;
             }
-            std::cout << "get pose!!!\n";
+            // std::cout << "get pose!!!\n";
 
             // Time equal check
             timeLaserOdometry = odometryBuf.front()->header.stamp.toSec();
             timeLaser = fullResBuf.front()->header.stamp.toSec();
-            // TODO
 
+            // info: 取出同步之后的cloud和pose
             laserCloudFullRes->clear();
             pcl::PointCloud<PointType>::Ptr thisKeyFrame(new pcl::PointCloud<PointType>());
             pcl::fromROSMsg(*fullResBuf.front(), *thisKeyFrame);
@@ -595,7 +600,8 @@ void process_pg()
             Pose6D pose_curr = getOdom(odometryBuf.front());
             odometryBuf.pop();
 
-            // find nearest gps
+            // info: 查找最近的gps信息, find nearest gps
+            // doc: 待改进, 插值
             double eps = 0.1; // find a gps topioc arrived within eps second
             while (!gpsBuf.empty())
             {
@@ -615,17 +621,17 @@ void process_pg()
             }
             mBuf.unlock();
 
-            //
+            // info: 计算增量, 判断关键帧
             // Early reject by counting local delta movement (for equi-spereated kf drop)
-            //
             odom_pose_prev = odom_pose_curr;
             odom_pose_curr = pose_curr;
             Pose6D dtf = diffTransformation(odom_pose_prev, odom_pose_curr); // dtf means delta_transform
 
-            double delta_translation = sqrt(dtf.x * dtf.x + dtf.y * dtf.y + dtf.z * dtf.z); // note: absolute value.
+            double delta_translation = sqrt(dtf.x * dtf.x + dtf.y * dtf.y + dtf.z * dtf.z); // note: absolute value. // INFO: 位移增量
             translationAccumulated += delta_translation;
-            rotaionAccumulated += (dtf.roll + dtf.pitch + dtf.yaw); // sum just naive approach.
+            rotaionAccumulated += (dtf.roll + dtf.pitch + dtf.yaw); // sum just naive approach. // info: 角度增量
 
+            // info: 根据增量判断是否为关键帧
             if (translationAccumulated > keyframeMeterGap || rotaionAccumulated > keyframeRadGap)
             {
                 isNowKeyFrame = true;
@@ -637,9 +643,12 @@ void process_pg()
                 isNowKeyFrame = false;
             }
 
+            // doc: 非关键帧跳过
             if (!isNowKeyFrame)
                 continue;
 
+            // info: GPS 初始化
+            // ?
             if (!gpsOffsetInitialized)
             {
                 if (hasGPSforThisKF)
@@ -649,9 +658,8 @@ void process_pg()
                 }
             }
 
-            //
+            // info: 保存关键帧, pose, 时间戳
             // Save data and Add consecutive node
-            //
             pcl::PointCloud<PointType>::Ptr thisKeyFrameDS(new pcl::PointCloud<PointType>());
             downSizeFilterScancontext.setInputCloud(thisKeyFrame);
             downSizeFilterScancontext.filter(*thisKeyFrameDS);
@@ -659,57 +667,62 @@ void process_pg()
             mKF.lock();
             keyframeLaserClouds.push_back(thisKeyFrameDS);
             keyframePoses.push_back(pose_curr);
-            keyframePosesUpdated.push_back(pose_curr); // init
+            keyframePosesUpdated.push_back(pose_curr); // init // info: 这里只是初始化, 后续会更新
             keyframeTimes.push_back(timeLaserOdometry);
 
+            // info: 生成ScanContext, 将关键帧存入 sc, 并赋予 key index
             scManager.makeAndSaveScancontextAndKeys(*thisKeyFrameDS);
 
-            laserCloudMapPGORedraw = true;
+            laserCloudMapPGORedraw = true;  // doc: 没啥用
             mKF.unlock();
 
+            // info: 构建连续时间的 因子图
             const int prev_node_idx = keyframePoses.size() - 2;
             const int curr_node_idx = keyframePoses.size() - 1; // becuase cpp starts with 0 (actually this index could be any number, but for simple implementation, we follow sequential indexing)
-            if (!gtSAMgraphMade /* prior node */)
+            if (!gtSAMgraphMade /* prior node */)   // info: 初始化
             {
                 const int init_node_idx = 0;
-                gtsam::Pose3 poseOrigin = Pose6DtoGTSAMPose3(keyframePoses.at(init_node_idx));
+                gtsam::Pose3 poseOrigin = Pose6DtoGTSAMPose3(keyframePoses.at(init_node_idx));  // ?
                 // auto poseOrigin = gtsam::Pose3(gtsam::Rot3::RzRyRx(0.0, 0.0, 0.0), gtsam::Point3(0.0, 0.0, 0.0));
 
                 mtxPosegraph.lock();
                 {
                     // prior factor
                     gtSAMgraph.add(gtsam::PriorFactor<gtsam::Pose3>(init_node_idx, poseOrigin, priorNoise));
-                    initialEstimate.insert(init_node_idx, poseOrigin);
+                    initialEstimate.insert(init_node_idx, poseOrigin);  // info: 设定各个变量节点的初值
                     // runISAM2opt();
                 }
                 mtxPosegraph.unlock();
 
-                gtSAMgraphMade = true;
+                gtSAMgraphMade = true;  // doc: 初始化完成
 
                 cout << "posegraph prior node " << init_node_idx << " added" << endl;
             }
-            else /* consecutive node (and odom factor) after the prior added */
+            else /* consecutive node (and odom factor) after the prior added */ // info: 连续里程计因子
             {    // == keyframePoses.size() > 1
                 gtsam::Pose3 poseFrom = Pose6DtoGTSAMPose3(keyframePoses.at(prev_node_idx));
                 gtsam::Pose3 poseTo = Pose6DtoGTSAMPose3(keyframePoses.at(curr_node_idx));
 
-                mtxPosegraph.lock();
+                mtxPosegraph.lock();    // info: 有其他线程共享 gtSAMgraph, 需要加锁
                 {
                     // odom factor
-                    gtsam::Pose3 relPose = poseFrom.between(poseTo);
+                    gtsam::Pose3 relPose = poseFrom.between(poseTo);    // info: 相对位姿因子
                     gtSAMgraph.add(gtsam::BetweenFactor<gtsam::Pose3>(prev_node_idx, curr_node_idx, relPose, odomNoise));
 
-                    // gps factor
+                    // info: 如果有 GPS 信息, 加入GPS因子 // gps factor 
                     if (hasGPSforThisKF)
                     {
                         double curr_altitude_offseted = currGPS->altitude - gpsAltitudeInitOffset;
                         mtxRecentPose.lock();
+                        // info: 这里只对高度添加了约束, 因为x, y本身就是优化之后pose的x, y, 残差计算应该会为0
                         gtsam::Point3 gpsConstraint(recentOptimizedX, recentOptimizedY, curr_altitude_offseted); // in this example, only adjusting altitude (for x and y, very big noises are set)
                         mtxRecentPose.unlock();
-                        gtSAMgraph.add(gtsam::GPSFactor(curr_node_idx, gpsConstraint, robustGPSNoise));
+                        gtSAMgraph.add(gtsam::GPSFactor(curr_node_idx, gpsConstraint, robustGPSNoise)); // ?
                         cout << "GPS factor added at node " << curr_node_idx << endl;
                     }
+                    // info: 设定各个变量节点的初值
                     initialEstimate.insert(curr_node_idx, poseTo);
+                    // info: 记录g2o边信息
                     writeEdge({prev_node_idx, curr_node_idx}, relPose, edges_str); // giseop
                     // runISAM2opt();
                 }
@@ -720,11 +733,12 @@ void process_pg()
             }
             // if want to print the current graph, use gtSAMgraph.print("\nFactor Graph:\n");
 
-            // save utility
+            // info: 保存关键帧点云 save utility
             std::string curr_node_idx_str = padZeros(curr_node_idx);
-            cout << pgScansDirectory + curr_node_idx_str << endl;
+            cout << "保存关键帧点云:" << pgScansDirectory + curr_node_idx_str << endl;
             pcl::io::savePCDFileBinary(pgScansDirectory + curr_node_idx_str + ".pcd", *thisKeyFrame); // scan
 
+            // info: 保存scan context
             const auto &curr_scd = scManager.getConstRefRecentSCD();
             saveSCD(pgSCDsDirectory + curr_node_idx_str + ".scd", curr_scd);
 
@@ -741,13 +755,16 @@ void process_pg()
     }
 } // process_pg
 
+// info: 执行闭环检测
 void performSCLoopClosure(void)
 {
+    // info: 关键帧太少时先跳过
     if (int(keyframePoses.size()) < scManager.NUM_EXCLUDE_RECENT) // do not try too early
         return;
 
     auto detectResult = scManager.detectLoopClosureID(); // first: nn index, second: yaw diff
     int SCclosestHistoryFrameID = detectResult.first;
+    // info: 检测到回环
     if (SCclosestHistoryFrameID != -1)
     {
         const int prev_node_idx = SCclosestHistoryFrameID;
@@ -755,14 +772,17 @@ void performSCLoopClosure(void)
         cout << "Loop detected! - between " << prev_node_idx << " and " << curr_node_idx << "" << endl;
 
         mBuf.lock();
+        // info: 收集给 ICP 线程计算约束
         scLoopICPBuf.push(std::pair<int, int>(prev_node_idx, curr_node_idx));
         // addding actual 6D constraints in the other thread, icp_calculation.
         mBuf.unlock();
     }
 } // performSCLoopClosure
 
+// info: 回环检测, 将相关的两帧id存在 scLoopICPBuf 中
 void process_lcd(void)
 {
+    // info: 回环检测的频率
     float loopClosureFrequency = 1.0; // can change
     ros::Rate rate(loopClosureFrequency);
     while (ros::ok())
@@ -892,13 +912,13 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     // save directories
+    // info: 存储一些关键帧信息
     nh.param<std::string>("alaserPGO/save_directory", save_directory, "/home/robot-nuc12/catkin_ws/src/slam/direct_lidar_odometry/data/"); // pose assignment every k m move
-    std::cout << save_directory <<std::endl;
+    std::cout << save_directory << std::endl;
+    nh.param("alaserPGO/save_map", save_map, false);
 
     pgKITTIformat = save_directory + "optimized_poses.txt";
     odomKITTIformat = save_directory + "odom_poses.txt";
-
-    // pgG2oSaveStream = std::fstream(save_directory + "singlesession_posegraph.g2o", std::fstream::out);
 
     pgTimeSaveStream = std::fstream(save_directory + "times.txt", std::fstream::out);
     pgTimeSaveStream.precision(std::numeric_limits<double>::max_digits10);
@@ -912,44 +932,57 @@ int main(int argc, char **argv)
     unused = system((std::string("mkdir -p ") + pgSCDsDirectory).c_str());
 
     // system params
+    // info: 设置关键帧选取的距离, 角度阈值
     nh.param<double>("keyframe_meter_gap", keyframeMeterGap, 2.0); // pose assignment every k m move
     nh.param<double>("keyframe_deg_gap", keyframeDegGap, 10.0);    // pose assignment every k deg rot
     keyframeRadGap = deg2rad(keyframeDegGap);
 
+    // ?: 读取scan context参数
     nh.param<double>("sc_dist_thres", scDistThres, 0.2);
     nh.param<double>("sc_max_radius", scMaximumRadius, 80.0); // 80 is recommended for outdoor, and lower (ex, 20, 40) values are recommended for indoor
 
+    // info:  因子图优化器
+    // ?:
     ISAM2Params parameters;
     parameters.relinearizeThreshold = 0.01;
     parameters.relinearizeSkip = 1;
     isam = new ISAM2(parameters);
     initNoises();
 
+    // ?: 设置scan context参数
     scManager.setSCdistThres(scDistThres);
     scManager.setMaximumRadius(scMaximumRadius);
 
-    float filter_size = 0.4;
+    double filter_size = 0.4;
+    nh.param<double>("alaserPGO/scan_filter_size", filter_size, 0.4); // pose assignment every k frames
     downSizeFilterScancontext.setLeafSize(filter_size, filter_size, filter_size);
     downSizeFilterICP.setLeafSize(filter_size, filter_size, filter_size);
 
     double mapVizFilterSize;
-    nh.param<double>("mapviz_filter_size", mapVizFilterSize, 0.4); // pose assignment every k frames
+    nh.param<double>("alaserPGO/mapviz_filter_size", mapVizFilterSize, 0.4); // pose assignment every k frames
     downSizeFilterMapPGO.setLeafSize(mapVizFilterSize, mapVizFilterSize, mapVizFilterSize);
 
+    // info: 读取点云 body坐标系
     ros::Subscriber subLaserCloudFullRes = nh.subscribe<sensor_msgs::PointCloud2>("/cloud_for_loop", 100, laserCloudFullResHandler);
+    // info: 读取前端odometry的位姿
     ros::Subscriber subLaserOdometry = nh.subscribe<nav_msgs::Odometry>("/robot/dlo_odom/odom_for_loop", 100, laserOdometryHandler);
+    // info: 订阅 GPS 信息
     ros::Subscriber subGPS = nh.subscribe<sensor_msgs::NavSatFix>("/gps/fix", 100, gpsHandler);
 
+    // info: 优化之后的 pose
     pubOdomAftPGO = nh.advertise<nav_msgs::Odometry>("/aft_pgo_odom", 100);
     pubOdomRepubVerifier = nh.advertise<nav_msgs::Odometry>("/repub_odom", 100);
+    // info: 优化之后的 map 和 path
     pubPathAftPGO = nh.advertise<nav_msgs::Path>("/aft_pgo_path", 100);
     pubMapAftPGO = nh.advertise<sensor_msgs::PointCloud2>("/aft_pgo_map", 100);
 
+    // info: 回环时的 lidar 点云和 submap
     pubLoopScanLocal = nh.advertise<sensor_msgs::PointCloud2>("/loop_scan_local", 100);
     pubLoopSubmapLocal = nh.advertise<sensor_msgs::PointCloud2>("/loop_submap_local", 100);
 
-    std::thread posegraph_slam{process_pg};   // pose graph construction
-    std::thread lc_detection{process_lcd};    // loop closure detection
+    // info: 开启多线程
+    std::thread posegraph_slam{process_pg};   // info: 位姿图构建线程: 添加odom factor和gps factor pose graph construction
+    std::thread lc_detection{process_lcd};    // info: 回环检测线程, 将相关的两帧id存在 scLoopICPBuf 中. loop closure detection
     std::thread icp_calculation{process_icp}; // loop constraint calculation via icp
     std::thread isam_update{process_isam};    // if you want to call less isam2 run (for saving redundant computations and no real-time visulization is required), uncommment this and comment all the above runisam2opt when node is added.
 
@@ -957,6 +990,23 @@ int main(int argc, char **argv)
     std::thread viz_path{process_viz_path}; // visualization - path (high frequency)
 
     ros::spin();
-
+    std::cout << "save_map = " << save_map << endl;
+    if (save_map)
+    {
+        std::cout << "- Saving map pcd: " << laserCloudMapPGO->size() << endl;
+        ROS_INFO_STREAM("- Saving map pcd: " << laserCloudMapPGO->size());
+        // pcl::transformPointCloud(*map, *map, t_cam_velo.inverse().cast<float>());
+        laserCloudMapPGO->width = laserCloudMapPGO->size();
+        laserCloudMapPGO->height = 1;
+        laserCloudMapPGO->resize(laserCloudMapPGO->width * laserCloudMapPGO->height);
+        std::string save_pcd_directory_ = "/home/robot-nuc12/catkin_ws/src/slam/SC-DLO/data/OptimizedMap/OptimizedMap.pcd";
+        pcl::io::savePCDFile(save_pcd_directory_, *laserCloudMapPGO);
+    }
+    posegraph_slam.detach();
+    lc_detection.detach();
+    icp_calculation.detach();
+    isam_update.detach();
+    viz_map.detach();
+    viz_path.detach();
     return 0;
 }

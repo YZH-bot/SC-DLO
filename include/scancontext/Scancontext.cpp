@@ -248,9 +248,9 @@ void SCManager::saveScancontextAndKeys( Eigen::MatrixXd _scd )
 
 void SCManager::makeAndSaveScancontextAndKeys( pcl::PointCloud<SCPointType> & _scan_down )
 {
-    Eigen::MatrixXd sc = makeScancontext(_scan_down); // v1 
-    Eigen::MatrixXd ringkey = makeRingkeyFromScancontext( sc );
-    Eigen::MatrixXd sectorkey = makeSectorkeyFromScancontext( sc );
+    Eigen::MatrixXd sc = makeScancontext(_scan_down); // v1 // info: 二维
+    Eigen::MatrixXd ringkey = makeRingkeyFromScancontext( sc ); // info: 一维
+    Eigen::MatrixXd sectorkey = makeSectorkeyFromScancontext( sc ); // info: 一维
     std::vector<float> polarcontext_invkey_vec = eig2stdvec( ringkey );
 
     polarcontexts_.push_back( sc ); 
