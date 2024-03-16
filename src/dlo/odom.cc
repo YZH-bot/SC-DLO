@@ -736,8 +736,8 @@ void dlo::OdomNode::icpCB(const sensor_msgs::PointCloud2ConstPtr &pc)
   this->publish_thread.detach();
 
   // Debug statements and publish custom DLO message
-  // this->debug_thread = std::thread(&dlo::OdomNode::debug, this);
-  // this->debug_thread.detach();
+  this->debug_thread = std::thread(&dlo::OdomNode::debug, this);
+  this->debug_thread.detach();
 }
 
 /**
