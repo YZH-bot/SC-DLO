@@ -410,11 +410,13 @@ void pubPath(void)
     br.sendTransform(tf::StampedTransform(transform, odomAftPGO.header.stamp, "robot/odom", "aft_pgo"));
 } // pubPath
 
+// info: 更新优化之后的位姿
 void updatePoses(void)
 {
     mKF.lock();
     for (int node_idx = 0; node_idx < int(isamCurrentEstimate.size()); node_idx++)
-    {
+    {   
+        // info: 引用进行修改
         Pose6D &p = keyframePosesUpdated[node_idx];
         p.x = isamCurrentEstimate.at<gtsam::Pose3>(node_idx).translation().x();
         p.y = isamCurrentEstimate.at<gtsam::Pose3>(node_idx).translation().y();
@@ -426,10 +428,12 @@ void updatePoses(void)
     mKF.unlock();
 
     mtxRecentPose.lock();
+    // info: 取出最新的 x,y 位置信息, 只在 GPS 因子部分用到, 因为这里 GPS 只提供高度约束 
     const gtsam::Pose3 &lastOptimizedPose = isamCurrentEstimate.at<gtsam::Pose3>(int(isamCurrentEstimate.size()) - 1);
     recentOptimizedX = lastOptimizedPose.translation().x();
     recentOptimizedY = lastOptimizedPose.translation().y();
 
+    // info: 判断是否更新发布信息, publisher 标志位
     recentIdxUpdated = int(keyframePosesUpdated.size()) - 1;
 
     mtxRecentPose.unlock();
@@ -438,13 +442,17 @@ void updatePoses(void)
 void runISAM2opt(void)
 {
     // called when a variable added
+    // info: 更新优化, 每次新增因子后，进行优化问题更新
     isam->update(gtSAMgraph, initialEstimate);
-    isam->update();
+    isam->update(); // ?:
 
-    gtSAMgraph.resize(0);
+    // info: 清空增量容器
+    gtSAMgraph.resize(0);   // ?:
     initialEstimate.clear();
 
+    // info: 优化问题求解
     isamCurrentEstimate = isam->calculateEstimate();
+    // info: 更新优化之后的位姿
     updatePoses();
 }
 
@@ -718,6 +726,7 @@ void process_pg()
                         double curr_altitude_offseted = currGPS->altitude - gpsAltitudeInitOffset;
                         mtxRecentPose.lock();
                         // info: 这里只对高度添加了约束, 因为x, y本身就是优化之后pose的x, y, 残差计算应该会为0
+                        // todo: recentOptimizedXY 和 curr_node_idx 以及 gps 信息时间上不完全对应, 不太严谨, 待改进
                         gtsam::Point3 gpsConstraint(recentOptimizedX, recentOptimizedY, curr_altitude_offseted); // in this example, only adjusting altitude (for x and y, very big noises are set)
                         mtxRecentPose.unlock();
                         gtSAMgraph.add(gtsam::GPSFactor(curr_node_idx, gpsConstraint, robustGPSNoise)); // ?
@@ -854,6 +863,7 @@ void process_isam(void)
     while (ros::ok())
     {
         rate.sleep();
+        // info: 初始化之后才会进去
         if (gtSAMgraphMade)
         {
             mtxPosegraph.lock();
@@ -988,7 +998,7 @@ int main(int argc, char **argv)
     std::thread posegraph_slam{process_pg};   // info: 位姿图构建线程: 添加odom factor和gps factor pose graph construction
     std::thread lc_detection{process_lcd};    // info: 回环检测线程, 将相关的两帧id存在 scLoopICPBuf 中. loop closure detection
     std::thread icp_calculation{process_icp}; // info: 检测到回环之后计算回环约束 loop constraint calculation via icp
-    std::thread isam_update{process_isam};    // if you want to call less isam2 run (for saving redundant computations and no real-time visulization is required), uncommment this and comment all the above runisam2opt when node is added.
+    std::thread isam_update{process_isam};    // info: 执行 isam 优化, 并更新位姿 if you want to call less isam2 run (for saving redundant computations and no real-time visulization is required), uncommment this and comment all the above runisam2opt when node is added.
 
     std::thread viz_map{process_viz_map};   // visualization - map (low frequency because it is heavy)
     std::thread viz_path{process_viz_path}; // visualization - path (high frequency)
