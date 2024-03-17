@@ -407,7 +407,7 @@ void pubPath(void)
     q.setY(odomAftPGO.pose.pose.orientation.y);
     q.setZ(odomAftPGO.pose.pose.orientation.z);
     transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, odomAftPGO.header.stamp, "odom", "aft_pgo"));
+    br.sendTransform(tf::StampedTransform(transform, odomAftPGO.header.stamp, "robot/odom", "aft_pgo"));
 } // pubPath
 
 void updatePoses(void)
@@ -485,7 +485,8 @@ void loopFindNearKeyframesCloud(pcl::PointCloud<PointType>::Ptr &nearKeyframes, 
             continue;
 
         mKF.lock();
-        *nearKeyframes += *local2global(keyframeLaserClouds[keyNear], keyframePosesUpdated[root_idx]);
+        // *nearKeyframes += *local2global(keyframeLaserClouds[keyNear], keyframePosesUpdated[root_idx]);
+        *nearKeyframes += *local2global(keyframeLaserClouds[keyNear], keyframePosesUpdated[keyNear]);   // info: it should be like this
         mKF.unlock();
     }
 
@@ -501,7 +502,7 @@ void loopFindNearKeyframesCloud(pcl::PointCloud<PointType>::Ptr &nearKeyframes, 
 
 std::optional<gtsam::Pose3> doICPVirtualRelative(int _loop_kf_idx, int _curr_kf_idx)
 {
-    // parse pointclouds
+    // info: 索取点云并转到世界坐标系下 parse pointclouds
     int historyKeyframeSearchNum = 25; // enough. ex. [-25, 25] covers submap length of 50x1 = 50m if every kf gap is 1m
     pcl::PointCloud<PointType>::Ptr cureKeyframeCloud(new pcl::PointCloud<PointType>());
     pcl::PointCloud<PointType>::Ptr targetKeyframeCloud(new pcl::PointCloud<PointType>());
@@ -533,6 +534,7 @@ std::optional<gtsam::Pose3> doICPVirtualRelative(int _loop_kf_idx, int _curr_kf_
     pcl::PointCloud<PointType>::Ptr unused_result(new pcl::PointCloud<PointType>());
     icp.align(*unused_result);
 
+    // info: 判断icp是否收敛以及是否小于指定阈值
     float loopFitnessScoreThreshold = 0.3; // user parameter but fixed low value is safe.
     if (icp.hasConverged() == false || icp.getFitnessScore() > loopFitnessScoreThreshold)
     {
@@ -544,7 +546,7 @@ std::optional<gtsam::Pose3> doICPVirtualRelative(int _loop_kf_idx, int _curr_kf_
         std::cout << "[SC loop] ICP fitness test passed (" << icp.getFitnessScore() << " < " << loopFitnessScoreThreshold << "). Add this SC loop." << std::endl;
     }
 
-    // Get pose transformation
+    // info: 获取相对约束 Get pose transformation
     float x, y, z, roll, pitch, yaw;
     Eigen::Affine3f correctionLidarFrame;
     correctionLidarFrame = icp.getFinalTransformation();
@@ -552,7 +554,8 @@ std::optional<gtsam::Pose3> doICPVirtualRelative(int _loop_kf_idx, int _curr_kf_
     gtsam::Pose3 poseFrom = Pose3(Rot3::RzRyRx(roll, pitch, yaw), Point3(x, y, z));
     gtsam::Pose3 poseTo = Pose3(Rot3::RzRyRx(0.0, 0.0, 0.0), Point3(0.0, 0.0, 0.0));
 
-    return poseFrom.between(poseTo);
+    // return poseFrom.between(poseTo);
+    return poseFrom;    // ?: 很奇怪, 这里 gisbi-kim 是反过来的, 这样子回环会有问题, 我改成这样以后稳定了
 } // doICPVirtualRelative
 
 void process_pg()
@@ -682,7 +685,7 @@ void process_pg()
             if (!gtSAMgraphMade /* prior node */)   // info: 初始化
             {
                 const int init_node_idx = 0;
-                gtsam::Pose3 poseOrigin = Pose6DtoGTSAMPose3(keyframePoses.at(init_node_idx));  // ?
+                gtsam::Pose3 poseOrigin = Pose6DtoGTSAMPose3(keyframePoses.at(init_node_idx));  // info: 初始化位姿
                 // auto poseOrigin = gtsam::Pose3(gtsam::Rot3::RzRyRx(0.0, 0.0, 0.0), gtsam::Point3(0.0, 0.0, 0.0));
 
                 mtxPosegraph.lock();
@@ -804,6 +807,7 @@ void process_icp(void)
                 ROS_WARN("Too many loop clousre candidates to be ICPed is waiting ... Do process_lcd less frequently (adjust loopClosureFrequency)");
             }
 
+            // doc: 取出回环id对
             mBuf.lock();
             std::pair<int, int> loop_idx_pair = scLoopICPBuf.front();
             scLoopICPBuf.pop();
@@ -812,7 +816,7 @@ void process_icp(void)
             const int prev_node_idx = loop_idx_pair.first;
             const int curr_node_idx = loop_idx_pair.second;
             auto relative_pose_optional = doICPVirtualRelative(prev_node_idx, curr_node_idx);
-            if (relative_pose_optional)
+            if (relative_pose_optional) // doc: 判断是否回环有效
             {
                 gtsam::Pose3 relative_pose = relative_pose_optional.value();
                 mtxPosegraph.lock();
@@ -983,7 +987,7 @@ int main(int argc, char **argv)
     // info: 开启多线程
     std::thread posegraph_slam{process_pg};   // info: 位姿图构建线程: 添加odom factor和gps factor pose graph construction
     std::thread lc_detection{process_lcd};    // info: 回环检测线程, 将相关的两帧id存在 scLoopICPBuf 中. loop closure detection
-    std::thread icp_calculation{process_icp}; // loop constraint calculation via icp
+    std::thread icp_calculation{process_icp}; // info: 检测到回环之后计算回环约束 loop constraint calculation via icp
     std::thread isam_update{process_isam};    // if you want to call less isam2 run (for saving redundant computations and no real-time visulization is required), uncommment this and comment all the above runisam2opt when node is added.
 
     std::thread viz_map{process_viz_map};   // visualization - map (low frequency because it is heavy)

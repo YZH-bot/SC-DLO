@@ -1,7 +1,7 @@
 alaserPGO:
   save_directory: /home/robot-nuc12/catkin_ws/src/slam/direct_lidar_odometry/data/
   save_map: true
-  
-  scan_filter_size: 0.1
-  mapviz_filter_size: 0.1
+
+  scan_filter_size: 0.2
+  mapviz_filter_size: 0.2
 
