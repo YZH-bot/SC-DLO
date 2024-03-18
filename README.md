@@ -16,11 +16,40 @@
 
 <p align="center">
     <img src="./doc/imgs/../img/dlo_detail.png" alt="drawing" height="220"/>
-    <img src="./doc/imgs/../img/dlo_gtsam_detail.png" alt="drawing" height="220">
+    <img src="./doc/imgs/../img/dlo_gtsam_detail2.png" alt="drawing" height="220">
     <br>
     <em>细节对比: 左图是无后端优化的 DLO Odometry, 右图是 SC-DLO</em>
 </p>
 
+**其他效果:**
+
+<p align="center">
+    <img src="./doc/img/ulhk.png" alt="drawing" width="720"/>
+</p>
+
+<!-- <table>
+  <thead>
+    <tr>
+      <th colspan="6">Global Map with Dynamic Objects in Red</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr align="center">
+      <td> 00 </td><td> 01 </td><td> 02 </td><td> 03 </td><td> 05 </td><td> 04 </td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td> <p align="center"><img src="imgs/dynamic_global_map/00.png" alt="animated" height="120" /></p> </td>
+      <td> <p align="center"><img src="imgs/dynamic_global_map/01.png" alt="animated" height="120" /></p> </td>
+      <td> <p align="center"><img src="imgs/dynamic_global_map/02.png" alt="animated" height="120" /></p> </td>
+      <td> <p align="center"><img src="imgs/dynamic_global_map/03.png" alt="animated" height="120" /></p> </td>
+      <td> <p align="center"><img src="imgs/dynamic_global_map/04.png" alt="animated" height="120" /></p> </td>
+      <td> <p align="center"><img src="imgs/dynamic_global_map/05.png" alt="animated" height="120" /></p> </td>
+    </tr>
+  </tbody>
+  </tbody>
+</table> -->
 #### 运行
 ```C++
 roslaunch direct_lidar_odometry sc_dlo.launch

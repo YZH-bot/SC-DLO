@@ -880,6 +880,7 @@ void process_isam(void)
 
 void pubMap(void)
 {
+    // info: 做个稀疏化
     int SKIP_FRAMES = 2; // sparse map visulalization to save computations
     int counter = 0;
 
@@ -908,6 +909,7 @@ void pubMap(void)
 
 void process_viz_map(void)
 {
+    // info: 10s 更新一下地图
     float vizmapFrequency = 0.1; // 0.1 means run onces every 10s
     ros::Rate rate(vizmapFrequency);
     while (ros::ok())
