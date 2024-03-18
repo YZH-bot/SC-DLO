@@ -15,8 +15,8 @@
 **为什么?:** 虽然说 dlo 本身作为一个纯激光的里程计(基于 GICP )的效果已经非常好了(经过调参可以达到比较好的效果), 但是在比较大或者动态物体较多的场景下在回环的时候地图还是会有些错位, 因此加上了后端优化把地图拉回来.
 
 <p align="center">
-    <img src="./doc/imgs/../img/dlo_detail.png" alt="drawing" height="220"/>
-    <img src="./doc/imgs/../img/dlo_gtsam_detail2.png" alt="drawing" height="220">
+    <img src="./doc/imgs/../img/dlo_detail.png" alt="drawing" height="200"/>
+    <img src="./doc/imgs/../img/dlo_gtsam_detail2.png" alt="drawing" height="200">
     <br>
     <em>细节对比: 左图是无后端优化的 DLO Odometry, 右图是 SC-DLO</em>
 </p>
@@ -24,7 +24,7 @@
 **其他效果:**
 
 <p align="center">
-    <img src="./doc/img/ulhk.png" alt="drawing" width="720"/>
+    <img src="./doc/img/ulhk.png" alt="drawing" width="600"/>
 </p>
 
 <!-- <table>
